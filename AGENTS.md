@@ -73,8 +73,8 @@ upstream's branches, releases or hosting, this file wins.
 
 ## Versions and release notes
 
-- The build takes the mod's version from git: the nearest tag, plus a commit count and hash when `HEAD` is past it.
-  Nothing in the tree holds a version number.
+- The build takes the mod's version from git: the tag on `HEAD`, or the nearest tag with `-git.<commits>+<hash>` when
+  `HEAD` is past it, and `-dirty` on an unclean tree. Nothing in the tree holds a version number.
 - A fork version is upstream's tag plus a fork suffix: `0.2.0-beta.3-tux.1`, then `-tux.2`. The base is always
   upstream's latest tag that `main` contains; never invent a base number here.
 - Tag once per handoff, not per commit: an annotated tag on the handed-off commit of `main`, pushed to `origin`. Build
