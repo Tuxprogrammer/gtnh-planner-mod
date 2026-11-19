@@ -5,7 +5,7 @@ on:
   pull_request:
     branches: [ master, main, dev ]
   push:
-    branches: [ master, main, dev ]
+    branches: [ master, main, dev, 'fix/**' ]
 
 jobs:
   build-and-test:
