@@ -1,5 +1,7 @@
 # GTNH Planner
 
+@AGENTS.md
+
 GTNH Planner, the in-game side of gtnhplanner.com (mod id `gtnhplanner`, package `com.gtnhplanner`). It started as
 a fork of sbancuz/PlanNH and was renamed on 2026-10-07 so the two never collide; saves (`plannh/plannh.dat` in a
 world's NEI folder) and config files from before the rename are still read, then written under the new names.
@@ -11,13 +13,8 @@ solved in the background (`data/flowchart/balancer/`, `SolveService`), auto-layo
 
 ## Remotes and branches
 
-- `origin` = github.com/jackwrichards/gtnh-planner-mod (ours; it was jackwrichards/PlanNH, a fork, until the rename),
-  `upstream` = github.com/sbancuz/PlanNH.
-- `main` is our trunk and the fork's default branch; it started from upstream `dev` (a0896df). The other branches
-  on the fork are untouched copies of upstream's. The plan is to gut and rebuild the codebase in our own image, so
-  upstream's branches, bugs and CI are not our concern; don't spend effort on them.
-- Changing the mod is fine when it makes developing or testing easier (hooks, debug output, testability
-  refactors). Don't do end-user work yet (UX polish, features, user-facing bug fixes): it is all going to change.
+- `origin` is this fork and `upstream` is the repo it was forked from: see Upstream and Working rules in `AGENTS.md`.
+  The branches the fork carries besides `main` are untouched copies of upstream's; leave them alone.
 - Dev tooling lives in `src/main/java/com/gtnhplanner/dev/`, `tools/dev/` and `docs/`; it is wired in through
   `DevHarness.initIfDev()` in `ClientProxy#init`.
 
@@ -260,7 +257,7 @@ solved in the background (`data/flowchart/balancer/`, `SolveService`), auto-layo
   moment it exists (`CloudSession.makeable`); being added to a plan arrives as `shared` (a board notice with Open, or a
   chat line with a clickable [Open], `client/OpenPlanCommand`) and the Library's Shared with me shelf lists them.
 - Cloud plans and live co-editing (the owner, 2026-10-14; `docs/design/cloud-live.md` is the contract with the
-  website, whose side is on its branch `cloud-live`, worktree `C:\Users\jack\ff-cloud`): signed in, the planner's
+  website): signed in, the planner's
   plans are the account's (own and shared), saved as every edit is made, the same on every device; signed out,
   nothing changes. Cloud mode starts only once the site's live service answers (`/live/health`), so before the
   rollout signed-in players keep their world plans. The layers: `cloud/net` (`LiveSocket` on Minecraft's netty, ws
@@ -280,8 +277,7 @@ solved in the background (`data/flowchart/balancer/`, `SolveService`), auto-layo
   account search); "Publish to library" is the old Share to library. `call cloud` reports the state (`fake=N` adds
   stand-in people); `PLANNH_LIBRARY_URL=http://localhost:3000 tools/dev/mc.sh start` keeps a dev game off the real
   site. End to end: the website's `npm run dev:local` (site :3000, live ws://localhost:3001/live, local Postgres),
-  `tools/dev/mock-live.mjs` without the website. Nothing of this reaches players before the owner's rollout
-  (staging at new.gtnhplanner.com, then a one-line Caddy switch; the website's `docs/live-rollout.md`).
+  `tools/dev/mock-live.mjs` without the website.
 - On the board a left press on anything (a card's keys and chips too, a drawer's, a note's) is a click when let go
   within 6 GUI pixels (`BoardCanvas.DRAG_SLOP`; tabs and task cards too) and acts then; moved further, it carries the thing. Carried things
   glide (about 120 ms) between 10 px grid spots and never land on another card or drawer: each frame they go to the
@@ -392,16 +388,17 @@ solved in the background (`data/flowchart/balancer/`, `SolveService`), auto-layo
   box (`ui/popup/TextArea`, our own: MUI2's multi-line editor crashed the game), a line naming what goes with it (the
   open plan by name, the game log, a crash report if there is one) and Send. `library/Reports` sends it, with a Simple
   picture of the plan and the log's tail with names, the home folder, addresses and tokens taken out, to the website's
-  `POST /api/feedback`, which opens it as a public issue on this repo (labels "from game" and bug, enhancement or
-  question) with the site's own token, so players need no GitHub account; the box then links the issue. The endpoint
-  answers 503 until `GITHUB_FEEDBACK_TOKEN` (a fine-grained token, Issues read and write on this repo) is in the
-  droplet's `/opt/shared/env.local`. The site guards it against spam (its `src/lib/server/feedback-guard.ts`, after a
+  `POST /api/feedback`, which opens it as a public issue on a repo (labels "from game" and bug, enhancement or
+  question) with the site's own token, so players need no GitHub account; the box then links the issue. Which repo
+  that is belongs to the site it is sent to, not to this code: the public site files on upstream's tracker (see
+  Upstream in `AGENTS.md`). The endpoint answers 503 while the site has no `GITHUB_FEEDBACK_TOKEN`. The site guards it
+  against spam (its `src/lib/server/feedback-guard.ts`, after a
   flood on 2026-10-12): a report must carry the mod's `deviceId` and `versions` shapes (change them there first), and
   there are limits per address and device, on the same words, and on issues site-wide. `client/CrashReports` puts the planner's state in every crash report and, on the
   next open, offers to send the newest report the planner was part of (`ui/popup/CrashOffer`: a planner frame in the
   error's stack, or a ModularUI frame with the planner open); asked once per crash. The mock answers
   `/api/feedback` too, writing each report to `build/dev-client/mock-feedback/`.
-- Updates: `client/UpdateCheck` asks this repo's GitHub releases once a game, in the background (pre-releases too;
+- Updates: `client/UpdateCheck` asks upstream's GitHub releases once a game, in the background (pre-releases too;
   tags compared as `0.2.0-alpha.N` < `-beta.N` < `-rc.N` < `0.2.0`, a dev build counting as its tag; jars before
   beta.1 read only alphas, so to them a beta is the release). When a newer one is out the board says so once
   per version as it opens (`ui/popup/UpdateOffer`, after any crash offer), with a key to that release's page; either
@@ -466,8 +463,10 @@ solved in the background (`data/flowchart/balancer/`, `SolveService`), auto-layo
 
 ## Build and test
 
-- Gradle provisions the JDKs (25 for the build, JetBrains Runtime 25 for `runClient25`). Keep the checkout at a
-  short path: deep Windows paths break the clone and the Minecraft dev setup (MAX_PATH).
+- Gradle provisions the JDKs (25 for the build, JetBrains Runtime 25 for `runClient25`). On Windows keep the
+  checkout at a short path: deep paths break the clone and the Minecraft dev setup (MAX_PATH). The Gradle daemon
+  needs more than its default heap for the downgrade step: set `org.gradle.jvmargs` (4 GB is enough) in the Gradle
+  user home's `gradle.properties`.
 - `./gradlew test`: 1,218 headless JUnit tests (the machine maths and power sources against the website, drawers, solve service, routing, layout, serialization),
   many over gtnh-flow YAML charts in `src/test/resources/gtnh-flow/`. About 40s, no Minecraft. `addon.gradle`
   opts `test` out of the configuration cache; without that a clean build reports `:test NO-SOURCE` and silently
@@ -479,26 +478,16 @@ solved in the background (`data/flowchart/balancer/`, `SolveService`), auto-layo
   mod versions (`tools/dev/compat/manifests/`, GTNH's release lists from DreamAssemblerXXL; add the next build's there),
   and fails on any gap not in `tools/dev/compat/guarded.txt` (each with why it is safe). Run it after moving the pins
   and before a release. It cannot see an API that still exists but behaves differently: test in an older pack for that.
-- The next release's notes build up as work lands: `.changelogs/unreleased.md`. Any commit to main that a player would
-  notice adds or edits its line there, in the same commit (the owner, 2026-10-12: always ready to ship). How they read:
-  Discord-casual and in a player's words, short and not daunting. Written as the engineers who made it, never as
-  marketing or as AI (the owner, 2026-10-13): short sentences with almost no commas, no slogans. One line a change,
-  grouped New / Better / Fixed; the
-  thing in bold only for a headline feature; no class names, settings keys, paths or numbers a player would not know;
-  never the website (pasted plans are "plan links and codes"). Fold small changes together rather than letting the
-  list grow; a change undone before release comes off the list.
-- Releases are tagged `0.2.0-beta.N` on main (annotated, "GTNH Planner <tag>"; alpha.1 to alpha.5 came before, as
-  pre-releases) and published as full releases (the owner, 2026-10-13), notes in
-  `.changelogs/<tag>.md`: rename `unreleased.md` to it, top it with the last release's short intro (beta warning,
-  which GTNH builds) and end it with its Install steps, and start a fresh empty `unreleased.md`. The release page is
-  for players only: no technical words at all, about 400 words (the owner, 2026-10-13). Everything technical goes in
-  `.changelogs/<tag>-technical.md`, linked from the end of the notes: what was broken, what we did, numbers, and
-  links to code lines and commits pinned to a SHA (never `main`), with the old code at the commit before the change.
-  Pictures: the owner takes them and pastes them into the draft on GitHub; the notes mark each place with a
-  `> 📷 **IMAGE N – ...**` line saying what to show. The fork's Actions have never run, so the tag builds nothing: run `./gradlew compatCheck`,
-  smoke-test the jar in the full pack, then build at the tag with a clean tree (`./gradlew build -x test`, so the jar takes the tag's version) and
-  `gh release create <tag> --repo jackwrichards/gtnh-planner-mod --draft --title "GTNH Planner <tag>" -F <notes>
-  build/libs/gtnhplanner-<tag>.jar` (plain `gh` picks upstream), for the owner to review and publish.
+- Release notes: `.changelogs/unreleased.md` and the `.changelogs/<tag>.md` files are upstream's and arrive with its
+  merges. This fork's notes, versions, tags and handoffs are in `AGENTS.md` (Versions and release notes, Handoffs).
+  How notes read is upstream's rule and holds here: Discord-casual and in a player's words, short and not daunting,
+  written as the engineers who made it, never as marketing: short sentences with almost no commas, no slogans. One
+  line a change, grouped New / Better / Fixed; the thing in bold only for a headline feature; no class names,
+  settings keys, paths or numbers a player would not know; never the website (pasted plans are "plan links and
+  codes"). Fold small changes together rather than letting the list grow; a change undone before a handoff comes off
+  the list.
+- Before a handoff: run `./gradlew compatCheck`, then build at the tag with a clean tree (`./gradlew build`), so the
+  jar takes the tag's version.
 - The solver (`docs/design/solver-plan.md`: what it promises, what was wrong, the phases) is checked against
   goldens: `./gradlew test --tests '*SolverGoldenTest*' -Pbench=check` compares every corpus plan's whole answer
   (`src/test/resources/solver-corpus/`, plans exported with `call 'solvedump?dir=...'`) to the recorded one, with
@@ -528,19 +517,18 @@ tools/dev/board-check.sh  # GT runs: end-to-end board check (recipe, port drag, 
 - `PLANNH_GTNH=1 tools/dev/mc.sh start` loads GregTech and the pack's recipes through the GTNH core mod (72 mods,
   about 30s once the jars are cached) in its own test world, `plannh-dev-gtnh`. Use it whenever real GT recipes,
   machines or items are needed; the plain start (29 mods, no GT) is enough for anything else.
-- The target pack is GTNH 2.9 (2.9.0-RC-2 as of 2026-10-09). `dependencies.gradle` pins that pack's versions of NEI,
-  GT, MUI2, GTNHLib, the core mod and every mod a recipe provider reads, so what compiles runs there; move them
-  together when the pack moves (NEI 2.8.155 changed the recipe button event and broke the plan button, so the
-  older event is guarded; `compatCheck` keeps the older builds working). The full
-  pack, all of its mods and recipes, is the Prism instance `GTNH_2.9.0-RC-2_planner`: build, swap the
-  `gtnhplanner-*.jar` in its `.minecraft/mods`, launch it with `prismlauncher.exe --launch GTNH_2.9.0-RC-2_planner`
-  (from `%LOCALAPPDATA%\Programs\PrismLauncher2`). Its JVM arguments turn the harness on and load
-  `gtnhplanner-dev`, so `mc.sh call`, `shot` and the rest work against it (screenshots land in the instance's
-  `.minecraft/screenshots`); `swap` and `start` do not. It opens at 854x480 whatever Prism's settings say:
-  `call 'window?w=1920&h=1080'` (`scale=` sets the GUI scale). It runs Java 21, so it runs the fully downgraded
+- The target pack is the GTNH 2.9.0 full release (`AGENTS.md`, Target pack). `dependencies.gradle` pins one pack
+  build's versions of NEI, GT, MUI2, GTNHLib, the core mod and every mod a recipe provider reads, so what compiles
+  runs there; move them together when the pins move (NEI 2.8.155 changed the recipe button event and broke the plan
+  button, so the older event is guarded; `compatCheck` keeps the older builds working).
+- The dev harness also drives a full pack instance: build, swap the `gtnhplanner-*.jar` in the instance's
+  `.minecraft/mods`, and launch it with JVM arguments that turn the harness on and load `gtnhplanner-dev`, so
+  `mc.sh call`, `shot` and the rest work against it (screenshots land in the instance's `.minecraft/screenshots`);
+  `swap` and `start` do not. It opens at 854x480 whatever the launcher's settings say:
+  `call 'window?w=1920&h=1080'` (`scale=` sets the GUI scale). A pack instance on Java 21 runs the fully downgraded
   classes (`gradle.properties`: the partial downgrade to 21 broke pattern switches), which the dev game on Java 25
-  never does. Its harness answers on port 25601 (`-Dgtnhplanner.dev.port` in its JVM arguments), so it runs beside a
-  dev game: `PLANNH_DEV_PORT=25601 tools/dev/mc.sh call ...`. Before sending input, check which game answers (a
+  never does. Give its harness its own port (`-Dgtnhplanner.dev.port` in its JVM arguments), so it runs beside a
+  dev game: `PLANNH_DEV_PORT=<port> tools/dev/mc.sh call ...`. Before sending input, check which game answers (a
   screenshot's path names its folder): sessions share these ports.
 - The board has its own GUI scale (`ui/PlannerScale`, the gear's Size: Tiny, Small, Normal, Large; Normal is a step
   below the game's, never below 2; Large is the game's): it lays out in its own pixels and draws scaled to the game's,
