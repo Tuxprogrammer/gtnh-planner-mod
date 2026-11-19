@@ -88,7 +88,8 @@ upstream's branches, releases or hosting, this file wins.
 ## Handoffs
 
 - This repo releases nothing and agents here never publish. No GitHub release, no upload to a mod site, no Maven
-  publish. The tag-release workflow is upstream's and is disabled on this fork; pushing a tag builds nothing.
+  publish. Upstream's tag-release workflow is removed on this fork, so pushing a tag builds nothing; keep it
+  removed when a merge brings it back.
 - A finished jar is handed to the pack operator (the Dave-Agent project), who puts it in the client pack. Hand over:
   the jar built at the tag, the commit SHA and tag, the notes for players, and anything the operator must do with it
   (a changed config file, a new JVM argument, a changed dependency on a pack mod).
